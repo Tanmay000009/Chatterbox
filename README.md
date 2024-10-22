@@ -51,15 +51,16 @@ Chatterbox enables users to engage in secure, real-time conversations using Node
    cd Chatterbox
    ```
 
-3. Setup `.env` with `sample.env` as a reference
+3. Setup `.env` with `sample.env` as a reference.
+> Note: Ensure that ENCRYPTION_KEY is 32 bytes long. Eg: super_strong_key_for_encryption9
 
-4. Install dependencies
+5. Install dependencies
 
    ```sh
    npm i
    ```
    
-5. Run development server
+6. Run development server
 
    ```sh
    npm run dev
