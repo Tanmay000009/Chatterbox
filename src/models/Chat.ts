@@ -1,13 +1,14 @@
 import { Schema, model } from "mongoose";
 import { ObjectId } from "mongodb";
 import aggregatePaginate from "mongoose-aggregate-paginate-v2";
+import { Security } from "../utils/encryption";
 
 export enum MessageType {
   TEXT = "text",
   IMAGE = "image",
 }
 
-export interface IMessage {
+export interface IMessage extends Document {
   senderId: ObjectId;
   senderUsername: string;
   text: string;
@@ -47,10 +48,54 @@ const chatSchema = new Schema({
 
 chatSchema.plugin(aggregatePaginate);
 
+// Encrypt the messages
+function EncryptMessages(messages) {
+  console.log(messages);
+
+  return messages.map((message) => {
+    message.text = Security.Encrypt(message.text);
+    return message;
+  });
+}
+
 // Middleware to update the updatedAt field on save
 chatSchema.pre("save", function (next) {
   this.updatedAt = new Date();
+  this.messages = EncryptMessages(this.messages);
   next();
+});
+
+chatSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+  console.log(update);
+
+  if (update["$push"]?.messages) {
+    update["$push"].messages = EncryptMessages([update["$push"].messages]);
+  }
+  next();
+});
+
+function DecryptMessages(messages: IMessage[]) {
+  return messages.map((message) => {
+    message.text = Security.Decrypt(message.text);
+    return message;
+  });
+}
+
+chatSchema.post("findOneAndUpdate", function (doc) {
+  doc.messages = DecryptMessages(doc.messages);
+});
+
+chatSchema.post("aggregate", function (docs) {
+  docs.forEach((doc) => {
+    doc.messages = DecryptMessages(doc.messages);
+  });
+});
+
+chatSchema.post("find", function (docs) {
+  docs.forEach((doc) => {
+    doc.messages = DecryptMessages(doc.messages);
+  });
 });
 
 const Chat = model("Chat", chatSchema);

@@ -30,9 +30,17 @@ const HashPassword = (password: string) => {
   return crypto.createHash("sha256").update(password).digest("hex");
 };
 
+const GenerateKeys = () => {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+  });
+  return { privateKey, publicKey };
+};
+
 export const AuthenticationUtil = {
   GenerateToken,
   VerifyToken,
   StrongPasswordRegex,
   HashPassword,
+  GenerateKeys,
 };

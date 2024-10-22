@@ -52,7 +52,7 @@ const sendMessage = async (req: AuthRequest & Request, res: Response) => {
     chatName: chat.name,
     chatId: dto.chatId,
     messageId: new ObjectId(),
-  };
+  } as IMessage;
 
   await ChatRepository.SendMessage(dto.chatId, messageStructure);
 

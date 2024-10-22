@@ -1,23 +1,37 @@
 import crypto from "crypto";
+import { ENCRYPTION_KEY } from "../configs/config";
 
-const algorithm = "aes-256-cbc";
-const key = crypto.randomBytes(32);
-const iv = crypto.randomBytes(16);
+const IV_LENGTH = 16;
 
-function Encrypt(text: string) {
-  const cipher = crypto.createCipheriv(algorithm, Buffer.from(key), iv);
-  let encrypted = cipher.update(text);
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return { iv: iv.toString("hex"), encryptedData: encrypted.toString("hex") };
+function Encrypt(text: string): string {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(
+    "aes-256-cbc",
+    Buffer.from(ENCRYPTION_KEY),
+    iv
+  );
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return `${iv.toString("hex")}:${encrypted}`;
 }
 
-function Decrypt(text: { iv: string; encryptedData: string }) {
-  const iv = Buffer.from(text.iv, "hex");
-  const encryptedText = Buffer.from(text.encryptedData, "hex");
-  const decipher = crypto.createDecipheriv(algorithm, Buffer.from(key), iv);
-  let decrypted = decipher.update(encryptedText);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-  return decrypted.toString();
+function Decrypt(text: string): string {
+  const parts = text?.split(":");
+  if (parts.length !== 2) return text;
+
+  const ivPart = parts.shift();
+  if (!ivPart) return text;
+  const iv = Buffer.from(ivPart, "hex");
+  const encryptedText = Buffer.from(parts.join(":"), "hex");
+  const decipher = crypto.createDecipheriv(
+    "aes-256-cbc",
+    Buffer.from(ENCRYPTION_KEY),
+    iv
+  );
+  let decrypted = decipher.update(encryptedText.toString("hex"), "hex", "utf8");
+  decrypted += decipher.final("utf8");
+
+  return decrypted;
 }
 
 export const Security = {
