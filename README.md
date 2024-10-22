@@ -14,7 +14,7 @@ Chatterbox enables users to engage in secure, real-time conversations using Node
 ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
 ## Features
-- End-to-End Encryption: Every message is encrypted for maximum privacy.
+- Encryption: Every message is encrypted at rest for maximum privacy using non-deterministic encryption.
 - Secure Authentication: OAuth and JWT-based authentication for secure access.
 - Real-time Communication: Instant messaging powered by Socket.io.
 - Multiple Chat Rooms: Engage in one-on-one or group chats seamlessly.
