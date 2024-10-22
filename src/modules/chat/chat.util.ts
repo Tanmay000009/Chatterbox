@@ -1,16 +1,18 @@
-import { ObjectId } from "mongoose";
+import { ObjectId } from "mongodb";
 import { IChat } from "../../models/Chat";
 
 const isUserAdmin = (chat: IChat, userId: ObjectId) => {
-  return chat.admins.includes(userId);
+  return chat.admins.some((admin) => admin.toString() === userId.toString());
 };
 
 const isUserMember = (chat: IChat, userId: ObjectId) => {
-  return chat.members.includes(userId);
+  return chat.members.some((member) => member.toString() === userId.toString());
 };
 
 const isUserParticipant = (chat: IChat, userId: ObjectId) => {
-  return isUserMember(chat, userId) || isUserAdmin(chat, userId);
+  const isMember = isUserMember(chat, userId);
+  const isAdmin = isUserAdmin(chat, userId);
+  return isMember || isAdmin;
 };
 
 export const ChatUtil = {

@@ -1,14 +1,31 @@
-import Chat, { IChat } from "../../models/Chat";
+import Chat, { IChat, IMessage } from "../../models/Chat";
 import { IUser } from "../../models/User";
+import { ObjectId } from "mongodb";
 
-const GetUserChats = async (id: string) => {
-  return await Chat.find(
-    { members: { $in: [id] } },
+const GetUserChats = async (id: ObjectId) => {
+  return await Chat.aggregate([
     {
-      messages: 0,
+      $match: {
+        $or: [{ admins: id }, { members: id }],
+      },
     },
-    { lean: true }
-  );
+    {
+      $project: {
+        admins: 1,
+        members: 1,
+        name: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        Count: {
+          $size: { $ifNull: ["$messages", []] },
+        },
+        messages: { $slice: ["$messages", -15] },
+      },
+    },
+    {
+      $sort: { updatedAt: -1 },
+    },
+  ]).exec();
 };
 
 const CreateChat = async (
@@ -29,14 +46,40 @@ const GetChatMembers = async (id: string) => {
   )) as unknown as IChat;
 };
 
-const GetChatById = async (id: string) => {
+const GetChatById = async (id: ObjectId) => {
   return (await Chat.findById(
     id,
-    {
-      messages: 0,
-    },
+    { messages: 0 },
     { lean: true }
   )) as unknown as IChat;
+};
+
+const GetChatByIdWithMessages = async (id: ObjectId) => {
+  return await Chat.aggregate([
+    {
+      $match: {
+        _id: id,
+      },
+    },
+    {
+      $project: {
+        admins: 1,
+        members: 1,
+        name: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        totalMessages: {
+          $size: {
+            $cond: [{ $isArray: "$messages" }, "$messages", []],
+          },
+        },
+        messages: { $slice: ["$messages", -15] },
+      },
+    },
+    {
+      $sort: { updatedAt: -1 },
+    },
+  ]).exec();
 };
 
 const UpdateChat = async (id: string, members: string[]) => {
@@ -54,24 +97,33 @@ const MakeUserAdmin = async (id: string, userId: string) => {
   });
 };
 
-const SendMessage = async (chatId: string, message: string) => {
+const SendMessage = async (chatId: string, message: IMessage) => {
   return await Chat.findByIdAndUpdate(chatId, { $push: { messages: message } });
 };
 
-const GetChatMessages = async (chatId: string, page: number, limit: number) => {
-  return await Chat.findById(
-    chatId,
-    { messages: 1 },
-    { lean: true, skip: page * limit, limit }
-  );
+const GetChatMessages = async (
+  chatId: string,
+  page: number,
+  pageSize: number
+) => {
+  const skip = (page - 1) * pageSize;
+  const chat = await Chat.findById(chatId)
+    .select("messages")
+    .populate({
+      path: "messages.senderId",
+      select: "username",
+    })
+    .slice("messages", [skip, pageSize]);
+
+  return chat ? chat.messages : [];
 };
 
 const GetChatSocketIds = async (chatId: string, userId: string = "") => {
-  const chat = await Chat.findById(chatId)
+  const chat = (await Chat.findById(chatId)
     .populate("members", "socketIds")
     .populate("admins", "socketIds")
     .select("members admins")
-    .lean();
+    .lean()) as unknown as IChat;
   const members = chat?.members?.concat(chat?.admins) as unknown as IUser[];
   console.log(userId, members);
 
@@ -99,4 +151,5 @@ export const ChatRepository = {
   GetChatMessages,
   GetChatSocketIds,
   GetChatByMembers,
+  GetChatByIdWithMessages,
 };

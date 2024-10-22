@@ -82,7 +82,7 @@ const loginUser = async (req: Request, res: Response) => {
   user.password = undefined;
   const token = AuthenticationUtil.GenerateToken(user);
 
-  res.status(200).json({ token, message: "User logged in successfully" });
+  res.status(200).json({ token, user, message: "User logged in successfully" });
 };
 
 const getUser = async (req: Request, res: Response) => {
@@ -117,7 +117,7 @@ const updatePassword = async (req: Request, res: Response) => {
 };
 
 const getAllUsers = async (req: Request, res: Response) => {
-  const users = await AuthRepository.GetAllUsers();
+  const users = await AuthRepository.GetAllUsers(req.user?._id);
 
   res.status(200).json({ users, message: "Users fetched successfully" });
 };

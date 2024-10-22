@@ -8,6 +8,6 @@ router.get("/user", AuthenticationMiddleware, AuthService.getUser);
 router.post("/register", AuthService.registerUser);
 router.post("/login", AuthService.loginUser);
 router.put("/update-password", AuthService.updatePassword);
-router.get("/users", AuthService.getAllUsers);
+router.get("/users", AuthenticationMiddleware, AuthService.getAllUsers);
 
 export const AuthController = router;

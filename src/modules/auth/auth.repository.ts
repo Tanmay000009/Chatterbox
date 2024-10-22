@@ -1,3 +1,4 @@
+import { ObjectId } from "mongoose";
 import User, { IUser } from "../../models/User";
 import { LoginDto } from "./dtos/login.dto";
 
@@ -41,10 +42,14 @@ const UpdateUserPassword = async (email: string, password: string) => {
   return await User.findOneAndUpdate({ email }, { password });
 };
 
-const GetAllUsers = async (): Promise<IUser[] | null> => {
-  return (await User.find({}, { password: 0 }, { lean: true })) as
-    | IUser[]
-    | null;
+const GetAllUsers = async (
+  userId: ObjectId | null = null
+): Promise<IUser[] | null> => {
+  return (await User.find(
+    userId ? { _id: { $ne: userId } } : {},
+    { password: 0 },
+    { lean: true }
+  )) as IUser[] | null;
 };
 
 const GetUserById = async (id: string): Promise<IUser | null> => {
@@ -53,6 +58,10 @@ const GetUserById = async (id: string): Promise<IUser | null> => {
     { password: 0 },
     { lean: true }
   )) as IUser | null;
+};
+
+const DropAllSocketIds = async () => {
+  return await User.updateMany({}, { $set: { socketIds: [] } });
 };
 
 export const AuthRepository = {
@@ -64,4 +73,5 @@ export const AuthRepository = {
   GetUserByUserId,
   GetAllUsers,
   GetUserById,
+  DropAllSocketIds,
 };

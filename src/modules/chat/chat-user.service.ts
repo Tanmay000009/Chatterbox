@@ -5,11 +5,18 @@ import { ValidateDto } from "../../utils/validator";
 import { ChatRepository } from "./chat.repository";
 import { ChatUtil } from "./chat.util";
 import { CreateChatDto } from "./dtos/createChat.dto";
+import { Server } from "socket.io";
+
+let io: Server;
+
+export const setSocketIOCU = (socketIO: Server) => {
+  io = socketIO;
+};
 
 const getUserChats = async (req: AuthRequest & Request, res: Response) => {
   const id = req.user?._id;
 
-  const chats = await ChatRepository.GetUserChats(id.toString());
+  const chats = await ChatRepository.GetUserChats(id);
 
   res.status(200).json({ chats, message: "Chats fetched successfully" });
 };
@@ -36,9 +43,15 @@ const createChat = async (req: AuthRequest & Request, res: Response) => {
       res.status(200).json({ chat, message: "Chat fetched successfully" });
       return;
     }
+    dto.name = null;
   }
 
   const chat = await ChatRepository.CreateChat(dto.members, [userId], dto.name);
+  const chatSocketIds = await ChatRepository.GetChatSocketIds(
+    chat._id.toString()
+  );
+
+  io.to(chatSocketIds).emit("newChat", chat);
 
   res.status(200).json({ chat, message: "Chat created successfully" });
 };
@@ -51,9 +64,11 @@ const getChatById = async (req: AuthRequest & Request, res: Response) => {
     return;
   }
 
-  const chat = await ChatRepository.GetChatById(id);
+  const [chat] = await ChatRepository.GetChatByIdWithMessages(
+    ConvertToObjectId(id)
+  );
 
-  res.status(200).json({ chat, message: "Chat fetched successfully" });
+  res.status(200).json({ chat, message: "Chat retrieved successfully" });
 };
 
 const leaveChat = async (req: AuthRequest & Request, res: Response) => {
@@ -65,7 +80,7 @@ const leaveChat = async (req: AuthRequest & Request, res: Response) => {
     return;
   }
 
-  const chat = await ChatRepository.GetChatById(chatId);
+  const chat = await ChatRepository.GetChatById(ConvertToObjectId(chatId));
 
   if (!chat) {
     res.status(400).json({ message: "Chat not found" });
@@ -104,7 +119,7 @@ const makeUserAdmin = async (req: AuthRequest & Request, res: Response) => {
 
   const targetUserObjectId = ConvertToObjectId(targetUserId);
 
-  const chat = await ChatRepository.GetChatById(chatId);
+  const chat = await ChatRepository.GetChatById(ConvertToObjectId(chatId));
 
   if (!chat) {
     res.status(400).json({ message: "Chat not found" });
@@ -121,7 +136,7 @@ const makeUserAdmin = async (req: AuthRequest & Request, res: Response) => {
     return;
   }
 
-  if (chat.admins.includes(targetUserObjectId)) {
+  if (ChatUtil.isUserAdmin(chat, targetUserObjectId)) {
     res.status(400).json({ message: "User is already an admin of this chat" });
     return;
   }
@@ -146,7 +161,7 @@ const removeUserFromChat = async (
     return;
   }
 
-  const chat = await ChatRepository.GetChatById(chatId);
+  const chat = await ChatRepository.GetChatById(ConvertToObjectId(chatId));
 
   if (!chat) {
     res.status(400).json({ message: "Chat not found" });

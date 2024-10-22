@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
+import { ObjectId } from "mongodb";
 
-export const ConvertToObjectId = (id: string): mongoose.Schema.Types.ObjectId =>
-  new mongoose.Schema.Types.ObjectId(id);
+export const ConvertToObjectId = (id: string) => new ObjectId(id);

@@ -8,6 +8,8 @@ import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import { ChatUtil } from "./chat.util";
 import { Server } from "socket.io";
+import { IMessage, MessageType } from "../../models/Chat";
+import { ObjectId } from "mongodb";
 
 let io: Server;
 
@@ -19,7 +21,7 @@ const sendMessage = async (req: AuthRequest & Request, res: Response) => {
   const dto = req?.body;
 
   const errors = await ValidateDto(dto, SendMessageDto);
-  if (errors) {
+  if (errors && errors.length > 0) {
     res.status(400).json({ errors });
     return;
   }
@@ -41,16 +43,28 @@ const sendMessage = async (req: AuthRequest & Request, res: Response) => {
     req.user._id.toString()
   );
 
-  io.to(chatSocketIds).emit("receiveMessage", {
+  const messageStructure: IMessage = {
+    senderId: req.user?._id,
+    text: dto.message,
+    timestamp: new Date(),
+    type: MessageType.TEXT,
+    senderUsername: req.user?.username,
+    chatName: chat.name,
     chatId: dto.chatId,
-    message: dto.message,
-    userId: req.user?._id,
-    name: chat.name,
+    messageId: new ObjectId(),
+  };
+
+  await ChatRepository.SendMessage(dto.chatId, messageStructure);
+
+  io.to(chatSocketIds).emit("receiveMessage", {
+    ...messageStructure,
+    chatId: dto.chatId,
   });
 
-  const sentMessage = await ChatRepository.SendMessage(dto.chatId, dto.message);
-
-  res.status(200).json({ sentMessage, message: "Message sent successfully" });
+  res.status(200).json({
+    sentMessage: messageStructure,
+    message: "Message sent successfully",
+  });
 };
 
 const getChatMessages = async (req: AuthRequest & Request, res: Response) => {
@@ -58,7 +72,7 @@ const getChatMessages = async (req: AuthRequest & Request, res: Response) => {
 
   const validationObject = plainToInstance(GetChatMessagesDto, query);
   const errors = await validate(validationObject as object);
-  if (errors) {
+  if (errors && errors.length > 0) {
     res.status(400).json({ errors });
     return;
   }
@@ -77,14 +91,14 @@ const getChatMessages = async (req: AuthRequest & Request, res: Response) => {
 
   const messages = await ChatRepository.GetChatMessages(
     validationObject.chatId,
-    validationObject.page,
-    validationObject.limit
+    validationObject.page ? parseInt(validationObject.page) : 1,
+    validationObject.limit ? parseInt(validationObject.limit) : 15
   );
 
   res.status(200).json({ messages, message: "Messages fetched successfully" });
 };
 
-export const ChatRoute = {
+export const ChatService = {
   sendMessage,
   getChatMessages,
   setSocketIO,

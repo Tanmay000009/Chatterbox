@@ -7,7 +7,7 @@ export const SocketAuthenticationMiddleware = async (
   socket: Socket,
   next: NextFunction
 ) => {
-  const token = String(socket.handshake.query.token);
+  const token = String(socket.handshake.auth.token);
 
   if (!token) {
     return next(new Error("Authentication error: token is missing"));
@@ -25,7 +25,7 @@ export const SocketAuthenticationMiddleware = async (
     return next(new Error("Invalid token"));
   }
 
-  const userId = decodedToken?.user?.id;
+  const userId = decodedToken?.user?._id.toString();
 
   if (!userId) {
     return next(new Error("Invalid token"));

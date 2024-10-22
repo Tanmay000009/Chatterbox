@@ -1,16 +1,13 @@
-import { Transform } from "class-transformer";
-import { IsNotEmpty, IsNumber, IsString } from "class-validator";
+import { IsNotEmpty, IsString } from "class-validator";
 
 export class GetChatMessagesDto {
   @IsString()
   @IsNotEmpty()
   chatId: string;
 
-  @Transform(({ value }) => parseInt(value || "0"))
-  @IsNumber()
-  page?: number;
+  @IsString()
+  page?: string;
 
-  @Transform(({ value }) => parseInt(value || "10"))
-  @IsNumber()
-  limit?: number;
+  @IsString()
+  limit?: string;
 }

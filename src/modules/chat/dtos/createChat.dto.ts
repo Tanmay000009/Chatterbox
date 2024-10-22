@@ -5,7 +5,7 @@ import {
   ArrayMinSize,
   IsString,
   Length,
-  IsOptional,
+  ValidateIf,
 } from "class-validator";
 
 export class CreateChatDto {
@@ -15,9 +15,9 @@ export class CreateChatDto {
   @IsMongoId({ each: true, message: "Invalid member ID" })
   members: string[];
 
-  @IsString()
+  @ValidateIf((object: CreateChatDto) => object.members.length > 1)
+  @IsString({ message: "Name is required for group chats" })
   @Length(1, 20, { message: "Name must be between 1 and 20 characters" })
-  @IsOptional()
-  @IsNotEmpty({ message: "Name is required" })
+  @IsNotEmpty({ message: "Name is required for group chats" })
   name?: string;
 }
